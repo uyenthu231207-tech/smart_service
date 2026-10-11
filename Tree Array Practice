@@ -1,0 +1,250 @@
+#include <stdio.h>
+#include <string.h>
+
+#define MAX 100
+#define EMPTY 0
+typedef struct {
+    int id;
+    char content[120];
+    int left, right;
+    int isLeaf;
+} Node;
+Node Tree[MAX];
+int n = 0, root = 1;
+void clearTree() {
+    for (int i = 0; i < MAX; i++) {
+        Tree[i].id = 0;
+        Tree[i].content[0] = '\0';
+        Tree[i].left = Tree[i].right = EMPTY;
+        Tree[i].isLeaf = 0;
+    }
+    n = 0;
+}
+int ready() {
+    if (n == 0) {
+        printf("Vui long nap hoac nhap cay truoc!\n");
+        return 0;
+    }
+    return 1;
+}
+void loadSampleTree() {
+    clearTree();
+    n = 7;
+    Tree[1] = (Node){1, "DTB < 2.0?", 2, 3, 0};
+    Tree[2] = (Node){2, "No >= 12 tin chi?", 4, 5, 0};
+    Tree[3] = (Node){3, "DTB >= 3.2?", 6, 7, 0};
+    Tree[4] = (Node){4, "Canh bao hoc vu muc 2", 0, 0, 1};
+    Tree[5] = (Node){5, "Canh bao hoc vu muc 1", 0, 0, 1};
+    Tree[6] = (Node){6, "De xuat khen thuong", 0, 0, 1};
+    Tree[7] = (Node){7, "Theo doi binh thuong", 0, 0, 1};
+    printf("Da nap cay mau thanh cong!\n");
+}
+void displayTree() {
+    if (!ready()) return;
+
+    printf("\n%-5s %-30s %-8s %-8s %-8s\n",
+           "Index", "Noi dung", "Left", "Right", "Leaf");
+
+    for (int i = 1; i <= n; i++) {
+        printf("%-5d %-30s %-8d %-8d %-8d\n",
+               i, Tree[i].content,
+               Tree[i].left, Tree[i].right,
+               Tree[i].isLeaf);
+    }
+}
+void preorder(int i) {
+    if (i == EMPTY) return;
+    printf("%d ", i);
+    preorder(Tree[i].left);
+    preorder(Tree[i].right);
+}
+void inorder(int i) {
+    if (i == EMPTY) return;
+    inorder(Tree[i].left);
+    printf("%d ", i);
+    inorder(Tree[i].right);
+}
+void postorder(int i) {
+    if (i == EMPTY) return;
+    postorder(Tree[i].left);
+    postorder(Tree[i].right);
+    printf("%d ", i);
+}
+void traversalMenu() {
+    int choice;
+    if (!ready()) return;
+    printf("\n1. Tien tu\n2. Trung tu\n3. Hau tu\n");
+    printf("Chon cach duyet: ");
+    scanf("%d", &choice);
+
+    if (choice == 1) preorder(root);
+    else if (choice == 2) inorder(root);
+    else if (choice == 3) postorder(root);
+    else {
+        printf("Lua chon khong hop le!\n");
+        return;
+    }
+    printf("\n");
+}
+int findByID(int id) {
+    for (int i = 1; i <= n; i++)
+        if (Tree[i].id == id) return i;
+    return EMPTY;
+}
+int printPath(int current, int target) {
+    if (current == EMPTY) return 0;
+
+    if (current == target) {
+        printf("%d", current);
+        return 1;
+    }
+    if (printPath(Tree[current].left, target) ||
+        printPath(Tree[current].right, target)) {
+        printf(" -> %d", current);
+        return 1;
+    }
+    return 0;
+}
+void searchNode() {
+    int choice, value, index;
+    if (!ready()) return;
+    printf("1. Tim theo index\n2. Tim theo ID\nChon: ");
+    scanf("%d", &choice);
+
+    if (choice == 1) {
+        printf("Nhap index: ");
+        scanf("%d", &index);
+        if (index < 1 || index > n) {
+            printf("Index khong hop le!\n");
+            return;
+        }
+    } else if (choice == 2) {
+        printf("Nhap ID: ");
+        scanf("%d", &value);
+        index = findByID(value);
+        if (index == EMPTY) {
+            printf("Khong tim thay ID!\n");
+            return;
+        }
+    } else {
+        printf("Lua chon khong hop le!\n");
+        return;
+    }
+    printf("Tim thay: %s\n", Tree[index].content);
+    printf("Duong di: ");
+    printPath(root, index);
+    printf("\n");
+}
+int height(int i) {
+    if (i == EMPTY) return 0;
+
+    int leftHeight = height(Tree[i].left);
+    int rightHeight = height(Tree[i].right);
+
+    return 1 + (leftHeight > rightHeight
+                ? leftHeight : rightHeight);
+}
+int countLeaves(int i) {
+    if (i == EMPTY) return 0;
+    if (Tree[i].isLeaf) return 1;
+
+    return countLeaves(Tree[i].left)
+         + countLeaves(Tree[i].right);
+}
+void statistics() {
+    if (!ready()) return;
+
+    printf("Chieu cao cay: %d\n", height(root));
+    printf("So nut: %d\n", n);
+    printf("So nut la: %d\n", countLeaves(root));
+}
+void decisionTree() {
+    int i = root;
+    char answer;
+
+    if (!ready()) return;
+
+    while (i != EMPTY && !Tree[i].isLeaf) {
+        printf("%s (C/K): ", Tree[i].content);
+        scanf(" %c", &answer);
+
+        if (answer == 'C' || answer == 'c')
+            i = Tree[i].left;
+        else if (answer == 'K' || answer == 'k')
+            i = Tree[i].right;
+        else
+            printf("Vui long nhap C hoac K!\n");
+    }
+
+    if (i != EMPTY)
+        printf("Ket luan: %s\n", Tree[i].content);
+}
+void inputTree() {
+    int count;
+
+    printf("Nhap so nut (1-%d): ", MAX - 1);
+    scanf("%d", &count);
+
+    if (count < 1 || count >= MAX) {
+        printf("So nut khong hop le!\n");
+        return;
+    }
+    clearTree();
+    n = count;
+    for (int i = 1; i <= n; i++) {
+        printf("\nNhap thong tin nut %d\n", i);
+        Tree[i].id = i;
+
+        printf("Noi dung: ");
+        getchar();
+        fgets(Tree[i].content, sizeof(Tree[i].content), stdin);
+        Tree[i].content[strcspn(Tree[i].content, "\n")] = '\0';
+
+        printf("Index con trai (0 neu khong co): ");
+        scanf("%d", &Tree[i].left);
+
+        printf("Index con phai (0 neu khong co): ");
+        scanf("%d", &Tree[i].right);
+
+        printf("La nut la? (1: Co, 0: Khong): ");
+        scanf("%d", &Tree[i].isLeaf);
+
+        if (Tree[i].left < 0 || Tree[i].left > n ||
+            Tree[i].right < 0 || Tree[i].right > n ||
+            Tree[i].left == i || Tree[i].right == i ||
+            (Tree[i].isLeaf != 0 && Tree[i].isLeaf != 1)) {
+            printf("Du lieu khong hop le, vui long nhap lai cay!\n");
+            clearTree();
+            return;
+        }
+    }
+    printf("\nDa nhap cay. Hay kiem tra bang chuc nang hien thi.\n");
+}
+int main() {
+    int choice;
+    do {
+        printf("\n========== MENU CAY NHI PHAN ==========\n");
+        printf("1. Nap cay mau\n");
+        printf("2. Nhap cay thu cong\n");
+        printf("3. Hien thi cay dang mang\n");
+        printf("4. Duyet cay\n");
+        printf("5. Tim kiem va in duong di\n");
+        printf("6. Thong ke cay\n");
+        printf("7. Mo phong cay quyet dinh\n");
+        printf("0. Thoat\n");
+        printf("Nhap lua chon: ");
+        scanf("%d", &choice);
+        switch (choice) {
+            case 1: loadSampleTree(); break;
+            case 2: inputTree(); break;
+            case 3: displayTree(); break;
+            case 4: traversalMenu(); break;
+            case 5: searchNode(); break;
+            case 6: statistics(); break;
+            case 7: decisionTree(); break;
+            case 0: printf("Ket thuc chuong trinh!\n"); break;
+            default: printf("Lua chon khong hop le!\n");
+        }
+    } while (choice != 0);
+    return 0;
+}
