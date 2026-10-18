@@ -1,0 +1,283 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define MAX 500
+typedef struct {
+    char id[30], name[80];
+    double gpa;
+    int credits, discipline, inputIndex;
+} Student;
+typedef struct {
+    long comparisons, moves;
+} Metrics;
+Student data[MAX];
+int count = 0;
+int readCSV(char filename[]) {
+    FILE *f = fopen(filename, "r");
+    char line[256];
+    int lineNo = 0;
+
+    if (f == NULL) {
+        printf("Khong mo duoc file %s\n", filename);
+        return 0;
+    }
+
+    count = 0;
+    while (fgets(line, sizeof(line), f) && count < MAX) {
+        lineNo++;
+
+        if (lineNo == 1 && strstr(line, "id,name") == line)
+            continue;
+
+        Student s;
+
+        if (sscanf(line, "%29[^,],%79[^,],%lf,%d,%d",
+                   s.id, s.name, &s.gpa,
+                   &s.credits, &s.discipline) != 5) {
+            printf("Loi dinh dang dong %d\n", lineNo);
+            continue;
+        }
+
+        if (s.gpa < 0 || s.gpa > 4 ||
+            s.credits < 0 ||
+            (s.discipline != 0 && s.discipline != 1)) {
+            printf("Du lieu khong hop le dong %d\n", lineNo);
+            continue;
+        }
+        int duplicate = 0;
+        for (int i = 0; i < count; i++) {
+            if (strcmp(data[i].id, s.id) == 0)
+                duplicate = 1;
+        }
+
+        if (duplicate) {
+            printf("Ma sinh vien trung: %s\n", s.id);
+            continue;
+        }
+
+        s.inputIndex = lineNo;
+        data[count++] = s;
+    }
+    fclose(f);
+    printf("Da doc %d sinh vien.\n", count);
+    return 1;
+}
+int eligible(Student s) {
+    return s.gpa >= 3.20 &&
+           s.credits >= 24 &&
+           s.discipline == 0;
+}
+
+int compare(Student a, Student b, int mode, Metrics *m) {
+    m->comparisons++;
+
+    if (a.gpa > b.gpa) return -1;
+    if (a.gpa < b.gpa) return 1;
+
+    if (mode == 1)
+        return 0;
+
+    if (a.credits > b.credits) return -1;
+    if (a.credits < b.credits) return 1;
+
+    return strcmp(a.id, b.id);
+}
+
+void insertionSort(Student a[], int n,
+                   int mode, Metrics *m) {
+    for (int i = 1; i < n; i++) {
+        Student key = a[i];
+        int j = i - 1;
+
+        while (j >= 0 &&
+               compare(a[j], key, mode, m) > 0) {
+            a[j + 1] = a[j];
+            m->moves++;
+            j--;
+        }
+
+        a[j + 1] = key;
+        m->moves++;
+    }
+}
+void selectionSort(Student a[], int n,
+                   int mode, Metrics *m) {
+    for (int i = 0; i < n - 1; i++) {
+        int min = i;
+
+        for (int j = i + 1; j < n; j++) {
+            if (compare(a[j], a[min], mode, m) < 0)
+                min = j;
+        }
+
+        if (min != i) {
+            Student temp = a[i];
+            a[i] = a[min];
+            a[min] = temp;
+            m->moves += 3;
+        }
+    }
+}
+
+void bubbleSort(Student a[], int n,
+                int mode, Metrics *m) {
+    for (int i = 0; i < n - 1; i++) {
+        int changed = 0;
+
+        for (int j = 0; j < n - i - 1; j++) {
+            if (compare(a[j], a[j + 1], mode, m) > 0) {
+                Student temp = a[j];
+                a[j] = a[j + 1];
+                a[j + 1] = temp;
+                m->moves += 3;
+                changed = 1;
+            }
+        }
+
+        if (!changed)
+            break;
+    }
+}
+void printList(Student a[], int n, int k) {
+    if (k > n)
+        k = n;
+
+    printf("\n%-5s %-10s %-15s %-6s %-8s\n",
+           "Hang", "Ma SV", "Ho ten", "GPA", "Tin chi");
+
+    for (int i = 0; i < k; i++) {
+        printf("%-5d %-10s %-15s %-6.2f %-8d\n",
+               i + 1, a[i].id, a[i].name,
+               a[i].gpa, a[i].credits);
+    }
+}
+void exportRanked(Student a[], int n) {
+    FILE *f = fopen("ranked.csv", "w");
+
+    if (f == NULL) {
+        printf("Khong tao duoc ranked.csv\n");
+        return;
+    }
+
+    fprintf(f, "rank,id,name,gpa,credits,discipline\n");
+
+    for (int i = 0; i < n; i++) {
+        fprintf(f, "%d,%s,%s,%.2f,%d,%d\n",
+                i + 1, a[i].id, a[i].name,
+                a[i].gpa, a[i].credits,
+                a[i].discipline);
+    }
+
+    fclose(f);
+}
+void exportSummary(int total, int passed,
+                   int algorithm, int mode, Metrics m) {
+    FILE *f = fopen("summary.txt", "w");
+
+    if (f == NULL)
+        return;
+
+    fprintf(f, "Tong ho so: %d\n", total);
+    fprintf(f, "Du dieu kien: %d\n", passed);
+    fprintf(f, "Khong du dieu kien: %d\n", total - passed);
+
+    fprintf(f, "Thuat toan: %s\n",
+            algorithm == 1 ? "Insertion Sort" :
+            algorithm == 2 ? "Selection Sort" :
+                             "Bubble Sort");
+
+    fprintf(f, "Che do: %s\n",
+            mode == 1 ? "Chi GPA" : "Xep hang chinh");
+
+    fprintf(f, "Comparisons: %ld\n", m.comparisons);
+    fprintf(f, "Moves: %ld\n", m.moves);
+
+    fclose(f);
+}
+int main() {
+    char filename[100];
+    int choice, algorithm, mode, k;
+
+    printf("Nhap ten file CSV: ");
+    scanf("%99s", filename);
+
+    if (!readCSV(filename))
+        return 1;
+
+    do {
+        printf("\n===== QUAN LY HOC BONG =====\n");
+        printf("1. Loc va xep hang sinh vien\n");
+        printf("2. Nap lai file CSV\n");
+        printf("0. Thoat\n");
+        printf("Lua chon: ");
+        scanf("%d", &choice);
+
+        if (choice == 1) {
+            Student list[MAX];
+            int n = 0;
+
+            for (int i = 0; i < count; i++) {
+                if (eligible(data[i]))
+                    list[n++] = data[i];
+            }
+
+            printf("1. Insertion Sort\n");
+            printf("2. Selection Sort\n");
+            printf("3. Bubble Sort\n");
+            printf("Chon thuat toan: ");
+            scanf("%d", &algorithm);
+
+            if (algorithm < 1 || algorithm > 3)
+                algorithm = 1;
+
+            printf("1. Chi GPA\n");
+            printf("2. Xep hang chinh\n");
+            printf("Chon che do: ");
+            scanf("%d", &mode);
+
+            if (mode != 1)
+                mode = 2;
+
+            printf("Nhap K: ");
+            scanf("%d", &k);
+
+            if (k < 0)
+                k = 0;
+
+            Metrics m = {0, 0};
+
+            if (algorithm == 1)
+                insertionSort(list, n, mode, &m);
+            else if (algorithm == 2)
+                selectionSort(list, n, mode, &m);
+            else
+                bubbleSort(list, n, mode, &m);
+
+            printf("\nTong ho so: %d\n", count);
+            printf("Du dieu kien: %d\n", n);
+            printf("Khong du dieu kien: %d\n", count - n);
+
+            printf("So phep so sanh: %ld\n", m.comparisons);
+            printf("So phep di chuyen: %ld\n", m.moves);
+
+            printList(list, n, k);
+
+            exportRanked(list, n);
+            exportSummary(count, n, algorithm, mode, m);
+
+            printf("Da xuat ranked.csv va summary.txt\n");
+        }
+        else if (choice == 2) {
+            printf("Nhap ten file CSV moi: ");
+            scanf("%99s", filename);
+            readCSV(filename);
+        }
+        else if (choice != 0) {
+            printf("Lua chon khong hop le!\n");
+        }
+
+    } while (choice != 0);
+
+    printf("Ket thuc chuong trinh.\n");
+    return 0;
+}
