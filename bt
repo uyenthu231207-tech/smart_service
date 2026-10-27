@@ -1,0 +1,243 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct {
+    int maSP;
+    char tenSP[50];
+    int soLuong;
+    double donGia;
+} Product;
+
+typedef struct Node {
+    Product data;
+    struct Node *left, *right;
+} Node;
+
+Node *taoNode(Product p) {
+    Node *n = (Node *)malloc(sizeof(Node));
+    if (n == NULL) {
+        printf("Khong du bo nho!\n");
+        return NULL;
+    }
+    n->data = p;
+    n->left = n->right = NULL;
+    return n;
+}
+
+Node *tim(Node *root, int ma) {
+    if (root == NULL || root->data.maSP == ma) return root;
+    if (ma < root->data.maSP) return tim(root->left, ma);
+    return tim(root->right, ma);
+}
+
+Node *chen(Node *root, Product p, int *ok) {
+    if (root == NULL) {
+        Node *n = taoNode(p);
+        if (n != NULL) *ok = 1;
+        return n;
+    }
+    if (p.maSP < root->data.maSP)
+        root->left = chen(root->left, p, ok);
+    else if (p.maSP > root->data.maSP)
+        root->right = chen(root->right, p, ok);
+    else *ok = -1;
+    return root;
+}
+
+void inTieuDe(void) {
+    printf("\n%-8s %-20s %-10s %-12s\n",
+           "Ma SP", "Ten san pham", "So luong", "Don gia");
+    printf("----------------------------------------------------\n");
+}
+
+void inSP(Product p) {
+    printf("%-8d %-20s %-10d %-12.0f\n",
+           p.maSP, p.tenSP, p.soLuong, p.donGia);
+}
+
+void duyetLNR(Node *root) {
+    if (root == NULL) return;
+    duyetLNR(root->left);
+    inSP(root->data);
+    duyetLNR(root->right);
+}
+
+int demNode(Node *root) {
+    if (root == NULL) return 0;
+    return 1 + demNode(root->left) + demNode(root->right);
+}
+
+int chieuCao(Node *root) {
+    if (root == NULL) return 0;
+    int a = chieuCao(root->left);
+    int b = chieuCao(root->right);
+    return 1 + (a > b ? a : b);
+}
+
+Node *nhoNhat(Node *root) {
+    while (root != NULL && root->left != NULL)
+        root = root->left;
+    return root;
+}
+
+Node *xoa(Node *root, int ma, int *ok) {
+    if (root == NULL) return NULL;
+
+    if (ma < root->data.maSP)
+        root->left = xoa(root->left, ma, ok);
+    else if (ma > root->data.maSP)
+        root->right = xoa(root->right, ma, ok);
+    else {
+        *ok = 1;
+        if (root->left == NULL) {
+            Node *p = root->right;
+            free(root);
+            return p;
+        }
+        if (root->right == NULL) {
+            Node *p = root->left;
+            free(root);
+            return p;
+        }
+        Node *p = nhoNhat(root->right);
+        root->data = p->data;
+        int boQua = 0;
+        root->right = xoa(root->right, p->data.maSP, &boQua);
+    }
+    return root;
+}
+
+void giaiPhong(Node *root) {
+    if (root == NULL) return;
+    giaiPhong(root->left);
+    giaiPhong(root->right);
+    free(root);
+}
+
+int nhapInt(char *s) {
+    int x;
+    printf("%s", s);
+    while (scanf("%d", &x) != 1) {
+        while (getchar() != '\n');
+        printf("Nhap lai: ");
+    }
+    while (getchar() != '\n');
+    return x;
+}
+
+Product nhapSP(void) {
+    Product p;
+    do {
+        p.maSP = nhapInt("Ma san pham (>0): ");
+    } while (p.maSP <= 0);
+
+    do {
+        printf("Ten san pham: ");
+        fgets(p.tenSP, sizeof(p.tenSP), stdin);
+        p.tenSP[strcspn(p.tenSP, "\n")] = '\0';
+    } while (strlen(p.tenSP) == 0);
+
+    do {
+        p.soLuong = nhapInt("So luong (>=0): ");
+    } while (p.soLuong < 0);
+
+    do {
+        printf("Don gia (>=0): ");
+        if (scanf("%lf", &p.donGia) != 1) {
+            while (getchar() != '\n');
+            p.donGia = -1;
+        } else {
+            while (getchar() != '\n');
+        }
+    } while (p.donGia < 0);
+    return p;
+}
+
+void them(Node **root) {
+    Product p = nhapSP();
+    if (tim(*root, p.maSP) != NULL) {
+        printf("Ma san pham da ton tai!\n");
+        return;
+    }
+    int ok = 0;
+    *root = chen(*root, p, &ok);
+    if (ok == 1) printf("Them thanh cong!\n");
+    else printf("Them that bai!\n");
+}
+
+void timSP(Node *root) {
+    int ma = nhapInt("Nhap ma can tim: ");
+    Node *p = tim(root, ma);
+    if (p == NULL) printf("Khong tim thay san pham!\n");
+    else {
+        inTieuDe();
+        inSP(p->data);
+    }
+}
+
+void xoaSP(Node **root) {
+    int ma = nhapInt("Nhap ma can xoa: "), ok = 0;
+    *root = xoa(*root, ma, &ok);
+    if (ok) printf("Da xoa san pham!\n");
+    else printf("Khong tim thay san pham!\n");
+}
+
+void napMau(Node **root) {
+    Product a[] = {
+        {50, "But bi", 120, 5000},
+        {30, "Vo o ly", 80, 12000},
+        {70, "Bia ho so", 35, 15000},
+        {20, "Thuoc ke", 40, 8000},
+        {40, "Tay", 65, 4000},
+        {60, "So tay", 25, 25000},
+        {80, "But chi", 110, 3000}
+    };
+    for (int i = 0; i < 7; i++) {
+        int ok = 0;
+        *root = chen(*root, a[i], &ok);
+    }
+}
+
+int main(void) {
+    Node *root = NULL;
+    napMau(&root);
+    int chon;
+
+    do {
+        printf("\n===== QUAN LY SAN PHAM BST =====\n");
+        printf("1. Them san pham\n");
+        printf("2. Tim san pham\n");
+        printf("3. Xoa san pham\n");
+        printf("4. In danh sach tang dan\n");
+        printf("5. Dem nut va chieu cao\n");
+        printf("6. Nap lai du lieu mau\n");
+        printf("7. Thoat\n");
+        chon = nhapInt("Chon: ");
+
+        switch (chon) {
+            case 1: them(&root); break;
+            case 2: timSP(root); break;
+            case 3: xoaSP(&root); break;
+            case 4:
+                if (root == NULL) printf("Cay rong!\n");
+                else { inTieuDe(); duyetLNR(root); }
+                break;
+            case 5:
+                printf("So nut: %d\n", demNode(root));
+                printf("Chieu cao: %d\n", chieuCao(root));
+                break;
+            case 6:
+                giaiPhong(root);
+                root = NULL;
+                napMau(&root);
+                printf("Da nap lai du lieu mau.\n");
+                break;
+            case 7: printf("Ket thuc chuong trinh.\n"); break;
+            default: printf("Lua chon khong hop le!\n");
+        }
+    } while (chon != 7);
+
+    giaiPhong(root);
+    return 0;
+}
